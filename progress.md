@@ -1,59 +1,64 @@
-# Project Progress Log: PyBullet Robot Simulation
+# 프로젝트 진행 로그: PyBullet 로봇 시뮬레이션
 
-## 1. Project Goal
-Implement a PyBullet physics simulation of a differential-drive robot that uses an emulated ultrasonic sensor to detect obstacles and stops smoothly $1.0\text{ m}$ ahead using a tuned PID controller, handling both static and dynamic environments.
-
----
-
-## 2. Completed Milestones
-
-### Phase 1: Environment Setup & Package Issues
-- [x] **Virtual Environment creation**: Set up an isolated Python 3.8 environment inside the workspace using `uv`.
-- [x] **PyBullet Windows Installation Resolution**: Resolved compiler failures (lack of MSVC build tools) by downloading a precompiled Windows CPython 3.8 package from `conda-forge` and manually extracting it to the local virtual environment.
-- [x] **Dependency Installation**: Installed `numpy` and `matplotlib` packages to enable physics vector math and telemetry plotting.
-
-### Phase 2: Model Design & Physics Tuning
-- [x] **URDF Design (`robot.urdf`)**: Designed a differential-drive chassis with active wheel joints, passive caster wheel, and ultrasonic sensor visuals.
-- [x] **Physics Stability Improvements**:
-  - Replaced cylinder wheel collisions with **spheres** to stabilize plane contact and rolling dynamics.
-  - Widened wheel base offset to prevent clipping into the chassis collision box.
-  - Changed the caster joint to **continuous** and set its lateral friction to **0.0** to allow frictionless forward rolling/sliding.
-- [x] **Control Joint Alignment**: Realigned the motor driving directions (applied negative target velocity) to drive the robot forward in global coordinates.
-
-### Phase 3: Initial Control Loop & Telemetry Verification
-- [x] **Ray Casting Sensor Emulation**: Programmed a forward-pointing ray cast in `simulation.py` to calculate distances to the red cylinder obstacle.
-- [x] **Stop Trigger logic**: Wrote feedback motor control to halt wheel rotations instantly when obstacle distance falls $\le 1.0\text{ m}$.
-- [x] **Headless Frame Capture**: Configured Tiny Renderer to capture simulation frames step-by-step and compile them into an animated GIF.
-- [x] **Telemetry Graphing**: Plotted distance-to-obstacle and velocity curves over time.
-- [x] **Execution Verification**: Confirmed the robot stops at **3.504 seconds** at a distance of **0.999 meters**.
-- [x] **Simulation Report**: Formatted and published [simulation_report.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/b53e6b17-e9ba-496d-9949-d152ae286e6b/simulation_report.md) with visual telemetry embeddings.
-
-### Phase 4: Multi-Ray Sensor & Comparative PID Tuning
-- [x] **Multi-Ray Sensor Array (FOV)**: Programmed a 5-ray diverging array (spanning $-15.0^\circ$ to $15.0^\circ$) via `rayTestBatch` to realistically emulate ultrasonic sensor cone coverage.
-- [x] **Smooth PID Deceleration**: Replaced the instant wheel-lock logic with a pure feedback control loop. Added integral control ($K_i$) to successfully overcome simulation friction and eliminate the steady-state deadband.
-- [x] **PID Response Parameter Comparison**: Implemented `--compare-pid` command-line option to compare Underdamped, Overdamped, and Critically Damped configurations.
-- [x] **Plot Comparison generation**: Outputted `pid_comparison.png` visualizing distance-to-obstacle and robot speed trajectories.
-
-### Phase 5: Dynamic Obstacles & Adaptive Cruise Control (ACC)
-- [x] **Dynamic Obstacle movement**: Created a moving obstacle that approaches the robot at $0.15\text{ m/s}$, deceleration profile testing.
-- [x] **Bidirectional PID Control**: Allowed full forward/backward motor adjustments to actively track and maintain the $1.0\text{ m}$ distance threshold.
-- [x] **Dynamic Telemetry Plot**: Charted both robot velocity and obstacle velocity over time (`results_dynamic.png`).
-- [x] **Simulation Telemetry & Report Update**: Updated [simulation_report.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/b53e6b17-e9ba-496d-9949-d152ae286e6b/simulation_report.md) with dynamic animations, results, and ACC analysis.
+## 1. 프로젝트 목표
+차동 구동형 로봇(Differential-Drive Robot)이 다중 레이 초음파 센서(Multi-Ray Sensor Array)를 사용하여 정적/동적 장애물을 감지하고 정교하게 조율된 PID 제어기 및 인공 잠재 필드법(APF)을 적용해 안전하게 감속·정지하거나 우회 주행하는 물리 시뮬레이션을 구현하고 이를 정량적으로 분석합니다.
 
 ---
 
-## 3. Telemetry Results Summary
+## 2. 완료된 마일스톤
 
-### Static Obstacle (Tuned PID)
-- **Time of Stopping**: $4.604\text{ s}$
-- **Detection Distance at Stop**: $1.003\text{ m}$ (within 3mm of target)
+### 1단계: 개발 환경 구성 및 라이브러리 설치 이슈 해결
+- [x] **가상환경 구성**: `uv` 패키지 매니저를 사용하여 워크스페이스 내에 독립된 Python 3.8 환경을 설정했습니다.
+- [x] **PyBullet Windows 컴파일러 이슈 해결**: MSVC C++ 빌드 도구가 없는 Windows 시스템 환경에서의 컴파일러 에러를 우회하기 위해 `conda-forge` Windows용 precompiled wheel 패키지를 수동 다운로드하여 가상환경 `site-packages` 폴더에 직접 이식 및 구성 완료했습니다.
+- [x] **기타 패키지 설치**: 로봇의 센서 수학 공식 처리 및 시뮬레이션 데이터 시각화를 위해 필수적인 `numpy`와 `matplotlib`을 연동 설치했습니다.
 
-### Dynamic Obstacle (Adaptive Cruise Control)
-- **Time of Stabilization**: $6.671\text{ s}$
-- **Detection Distance at Stabilized Stop**: $0.958\text{ m}$ (within 4.2cm of target)
-- **Behavior**: Smooth deceleration matching the speed of the approaching target, holding safety boundary successfully.
+### 2단계: 로봇 3D 모델(URDF) 설계 및 물리 정밀 튜닝
+- [x] **URDF 모델 모델링 (`robot.urdf`)**: 차동 구동식 바퀴 조인트와 방향 감지 초음파 센서의 물리적 형상(황색 실린더 구조)을 반영한 통합 로봇 섀시 모델을 직접 프로그래밍 설계했습니다.
+- [x] **물리적 접촉 및 롤링 안정성 튜닝**:
+  - 기존 실린더 형태 바퀴의 물리 충돌 경계가 평면 지면과 마찰할 때 생기는 튀는(numerical bouncing) 문제를 방지하기 위해 충돌 경계를 **구체(Sphere)** 기하 구조로 매핑하여 접지 및 구름 물리 성능을 극대화했습니다.
+  - 전방 캐스터 휠(보조 휠)의 수치적 미끄러짐 방지를 위해 `continuous` 조인트 속성으로 변환하고 횡방향 마찰 계수(`lateralFriction`)를 `0.0`으로 설정하여 동력 손실을 전면 차단했습니다.
+- [x] **바퀴 조인트 정렬**: 구동 바퀴 회전 방향 오리엔테이션 차이를 보정하여 로봇이 정상적으로 글로벌 좌표계 양의 X축으로 직진하도록 제어 출력을 일치시켰습니다.
+
+### 3단계: 초기 제어 루프 및 센서 테스트
+- [x] **레이 캐스팅 기반 거리 센서 구현**: 전방 장애물(적색 실린더)과의 이격 거리를 정교하게 계측하기 위해 전방 기하 레이 캐스팅 연산을 연동했습니다.
+- [x] **즉각 제동 로직 검증**: 장애물 이격 거리 $\le 1.0\text{ m}$ 이하 감지 시 모터 조인트를 락(Lock)하는 기본 제동을 확인했습니다.
+- [x] **시각 렌더링 프레임 캡처**: 헤드리스 모드에서 Tiny Renderer API를 구동하여 매 step의 프레임을 캡처하고 프레임을 엮어 애니메이션 GIF로 조립하는 모듈을 통합했습니다.
+
+### 4단계: 다중 레이 센서 확장 및 PID 감속 최적화
+- [x] **다중 레이 초음파 센서 배열 (FOV)**: 실제 센서의 원뿔형 빔 감지각($30^\circ$)을 모사하기 위해 $\pm 15^\circ$ 범위 내로 5개의 레이를 방사하고 `rayTestBatch` API를 통해 한 번에 처리하여 감지 신뢰도를 높였습니다.
+- [x] **안정적인 PID 감속 제어 구현**: 정지선 직전 급정거 대신, 속도를 점진적으로 줄이는 pure 피드백 PID 루프를 설계하고, 물리 엔진의 지면 마찰을 이겨낼 수 있도록 적분 제어기($K_i$)를 튜닝하여 잔여 제어 Deadband 문제를 해소했습니다.
+- [x] **제어기 응답 특성 비교 테스트**: 부족 감쇠(Underdamped, overshoot 발생), 과감쇠(Overdamped, 마찰로 인한 조기 정지), 임계 감쇠(Critically Damped, 오버슈트 없는 정밀 정지) 3개 구성을 순차 가동하고 이를 오버레이 플로팅(`pid_comparison.png`)해 비교 분석했습니다.
+
+### 5단계: 동적 장애물 감지 및 유지 제어 (ACC)
+- [x] **동적 장애물 제어**: 로봇을 향해 $0.15\text{ m/s}$로 천천히 다가오는 움직이는 장애물을 설계하여 능동적인 가변 거리 제어(Adaptive Cruise Control)를 실현했습니다.
+- [x] **양방향 제어 명령 인가**: 장애물이 너무 가까워졌을 때 안전거리 $1.0\text{ m}$를 능동적으로 지키기 위해 후진 동력 전달까지 허용하는 양방향 클램핑 PID 제어를 완성하고 분석 그래프(`results_dynamic.png`)를 갱신했습니다.
+
+### 6단계: 인공 잠재 필드법(APF) 기반 장애물 우회 주행
+- [x] **실시간 경로 계획 알고리즘(APF) 구현**: 로봇이 목표지점($X=5.0, Y=0.0$)으로 끌어당기는 인력(Attractive)과 장애물($X=2.5, Y=0.0$)이 밀어내는 척력(Repulsive)을 벡터식으로 결합한 실시간 위치 제어기를 도입했습니다.
+- [x] **차동 조향 제어기 연동**: 결합된 힘의 벡터 각도를 로봇 헤딩이 추종하도록 비례-미분 조향 제어(PD steering)를 구축하여, 정면에 위치한 장애물을 곡선을 그리며 유연하게 피해 목적지에 안정적으로 안착하도록 구현했습니다.
+- [x] **궤적 시각화**: 로봇의 2D 평면 주행 궤적선 및 휠 속도 프로파일 분석 그래프(`results_avoid.png`)를 생성 완료했습니다.
 
 ---
 
-## 4. Next Steps & Optional Features
-- [ ] **Path Planning / Obstacle Avoidance**: Extend the robot's control system to steer around obstacles rather than just stopping in front of them (e.g. Bug algorithms, Potential Fields, or A* pathfinding).
+## 3. 핵심 텔레메트리 계측 결과 요약
+
+### A. 정적 장애물 회피 (Critically Damped PID)
+*   **제어 이득**: $K_p=4.5, K_i=0.15, K_d=0.25$
+*   **목표 정지 거리**: $1.000\text{ m}$ | **실제 최소 도달 거리**: $1.003\text{ m}$ (단 $3\text{ mm}$의 초정밀 잔여 오차 수렴)
+*   **완전 정지 소요 시간**: $4.604\text{ s}$
+
+### B. 동적 장애물 유지 제어 (ACC 모드)
+*   **동적 장애물 속도**: $-0.15\text{ m/s}$ (로봇을 향해 돌진 후 $X=1.6$에서 정지)
+*   **최종 유지 안전 거리**: $0.958\text{ m}$ (가변 동적 환경에서 약 $4.2\text{ cm}$ 이내의 제어 안정성 확보)
+*   **최종 수렴 소요 시간**: $6.671\text{ s}$
+
+### C. APF 장애물 우회 주행 (Goal-seeking APF)
+*   **장애물 위치 / 목표 지점**: $X=2.5, Y=0.0$ / $X=5.0, Y=0.0$
+*   **주행 거동**: $X=1.5\text{ m}$ 지점부터 장애물 회피 척력 영향권에 도달하여 Y축 상단 방향으로 부드럽게 돌아 나간 뒤, 장애물을 넘어서자마자 다시 목표선인 $Y=0.0$에 수렴하며 안정적으로 목적지에 복귀 및 감속 정지 완료했습니다.
+*   **목표 도달 소요 시간**: $13.525\text{ s}$ (목표 반경 $15\text{ cm}$ 이내 안착 완료)
+
+---
+
+## 4. 향후 계획 및 확장 가능 과제
+- [ ] **센서 노이즈 필터링**: 계측 신호에 임의의 가우시안 노이즈를 섞고, 이동 평균 필터(Moving Average Filter) 및 칼만 필터(Kalman Filter)를 구축하여 센서 오류를 필터링하는 로버스트 제어 시스템 실험.
+- [ ] **A* 알고리즘 경로 주행**: 2D Grid Map 상에 정적인 미로를 형성하고, A* 알고리즘으로 계산된 전역 경로점(Waypoint)들을 순차적으로 추종하며 주행하는 모빌리티 통합 실험.
