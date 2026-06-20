@@ -1,0 +1,26 @@
+name: robotics-tutor-agent
+version: 1.0.0-MVP
+engine: gemini-3.5-flash-high # 대화 및 코드 생성 응답 속도가 중요한 MVP용 엔진
+permissions:
+  tool_execution: request-review # Ngspice/Python 실행 전 승인 대기하여 안전성 확보
+
+# 메인 에이전트가 사용할 하위 전문가(Subagents) 정의
+subagents:
+  - name: circuit_bot
+    description: "Ngspice 넷리스트 작성 및 SPICE 회로 시뮬레이션 전담"
+    skills: [ "skills/circuit_design.md" ]
+  - name: robotics_bot
+    description: "PyBullet 기반 파이썬 스크립트 작성 및 동역학 제어 전담"
+    skills: [ "skills/robotics_control.md" ]
+
+# MCP(Model Context Protocol) 툴 연동
+mcp_tools:
+  - name: ngspice_runner
+    command: "ngspice"
+    args: [ "-b", "${file_path}" ]
+  - name: pybullet_runner
+    command: "python"
+    args: [ "${script_path}" ]
+
+hooks:
+  post_run: "python scripts/visualize_results.py" # 시뮬레이션 완료 후 Matplotlib 시각화 훅 실행
